@@ -521,7 +521,7 @@ function Object:Update(settings, pool)
     end
 
     for _, plugin in pairs(pool.Plugins) do 
-        plugin:Update(pool, target, box);
+        plugin:Update(pool, self, target, box);
     end
 end
 
