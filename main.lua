@@ -622,18 +622,13 @@ end
 function Pool:InstallPlugin(plugin)
     --// Plugin Settings & Styles 
     for setting, value in pairs(plugin.Settings) do 
-        self.Settings[setting] = value;
+        self.Settings[plugin.Name] = value;
     end
 
-    for _, style in pairs(plugin.Style) do 
-        self.Style[style] = plugin.Style[style];
-    end
+    self.Style[plugin.Name] = plugin.Style; 
+    self.OutlineStyle[plugin.Name] = plugin.OutlineStyle;
 
-    for _, style in pairs(plugin.OutlineStyle) do 
-        self.OutlineStyle[style] = plugin.OutlineStyle[style];
-    end
-
-    self:EditStyle(plugin.Style, plugin.OutlineStyle);
+    self:EditStyle({plugin.Style}, {plugin.OutlineStyle});
 
     if (plugin.Initialize) then 
         plugin:Initialize(); 
