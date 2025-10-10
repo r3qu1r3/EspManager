@@ -633,6 +633,8 @@ function Pool:InstallPlugin(plugin)
         self.OutlineStyle[style] = plugin.OutlineStyle[style];
     end
 
+    self:EditStyle(plugin.Style, plugin.OutlineStyle);
+
     if (plugin.Initialize) then 
         plugin:Initialize(); 
     end;
