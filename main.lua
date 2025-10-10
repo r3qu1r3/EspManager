@@ -97,24 +97,26 @@ local DefaultSettings: SettingsProfile = {
 };
 
 local DefaultPoolStyle: PoolStyle = {
-    Box = { Color3 = Color3.new(1, 0, 0), Thickness = 2 },
-    Tracer = { Color3 = Color3.new(1, 0, 0), Thickness = 1 },
-    TopTag = { Color3 = Color3.new(1, 1, 1), Size = 14, Center = true, Outline = true, Font = Enum.Font.SourceSansBold },
-    BottomTag = { Color3 = Color3.new(1, 1, 1), Size = 14, Center = true, Outline = true, Font = Enum.Font.SourceSansBold },
-    CornerBox = { Color3 = Color3.new(1, 0, 0), Thickness = 2 },
-    Box3D = { Color3 = Color3.new(1, 0, 0), Thickness = 1, Filled = false },
+    Box = { Color = Color3.new(1, 1, 1), Thickness = 1 },
+    Tracer = { Color = Color3.new(1, 1, 1), Thickness = 2 },
     Bars = {
-        Left = { FillColor = Color3.new(0, 1, 0), BackgroundColor = Color3.new(1, 0, 0), Thickness = 4, BackgroundThickness = 4 },
-        Right = { FillColor = Color3.new(0, 1, 0), BackgroundColor = Color3.new(1, 0, 0), Thickness = 4, BackgroundThickness = 4 },
-        Top = { FillColor = Color3.new(0, 1, 0), BackgroundColor = Color3.new(1, 0, 0), Thickness = 4, BackgroundThickness = 4 },
-        Bottom = { FillColor = Color3.new(0, 1, 0), BackgroundColor = Color3.new(1, 0, 0), Thickness = 4, BackgroundThickness = 4 }
-    }
-};
+        Left = { FillColor = Color3.new(0.156862, 0.658823, 0.156862), BackgroundColor = Color3.new(0, 0, 0), Thickness = 4 },
+        Top = { FillColor = Color3.new(0.168627, 0.835294, 0.858823), BackgroundColor = Color3.new(0, 0, 0), Thickness = 4 },
+        Right = { FillColor = Color3.new(0.686274, 0.231372, 0.231372), BackgroundColor = Color3.new(0, 0, 0), Thickness = 4 },
+        Bottom = { FillColor = Color3.new(0.913725, 0.827450, 0.050980), BackgroundColor = Color3.new(0, 0, 0), Thickness = 4 }
+    },
+    Box3D = { Color = Color3.new(1, 1, 1), Thickness = 1, Filled = true, Transparency = 0.2 },
+    TopTag = { Color = Color3.new(1, 1, 1), Size = 16, Center = true, Outline = true, Font = Enum.Font.ArialBold },
+    CornerBox = { Color = Color3.new(1, 1, 1), Thickness = 2 },
+    BottomTag = { Color = Color3.new(1, 1, 1), Size = 16, Center = true, Outline = true, Font = Enum.Font.ArialBold }
+}
+
+
 
 local DefaultOutlineStyle: PoolStyle = {
-    Box = { Color3 = Color3.new(0, 0, 0), Thickness = 4 },
-    Tracer = { Color3 = Color3.new(0, 0, 0), Thickness = 2 },
-    CornerBox = { Color3 = Color3.new(0, 0, 0), Thickness = 4 },
+    Box = { Color = Color3.new(0, 0, 0), Thickness = 4 },
+    Tracer = { Color = Color3.new(0, 0, 0), Thickness = 2 },
+    CornerBox = { Color = Color3.new(0, 0, 0), Thickness = 4 },
     BottomBar = { FillColor = Color3.new(0, 0, 0), BackgroundColor = Color3.new(0, 0, 0), Thickness = 6 }
 };
 
@@ -276,6 +278,17 @@ local function ApplyStyleToObjects(objects, styleTable, drawingsField)
         end
     end
 end
+
+local function ApplyStyleToObject(object, styleTable, drawingsField)
+    for name, props in pairs(styleTable) do 
+        local drawings = object[drawingsField][name];
+        if name == "Bars" then
+            ApplyBars(drawings, props);
+        else
+            ChangeDrawingProperties(drawings, props);
+        end
+    end; 
+end; 
 
 --// Object Class
 local Object = {};
@@ -540,7 +553,7 @@ local Pool = { __pools = {} };
 Pool.__index = Pool;
 
 function Pool.new(settings, style, outlineStyle)
-    local self = setmetatable({
+    local newPool = setmetatable({
         Settings = settings or DefaultSettings,
         Style = style or DefaultPoolStyle,
         OutlineStyle = outlineStyle or DefaultOutlineStyle,
@@ -548,8 +561,9 @@ function Pool.new(settings, style, outlineStyle)
         Plugins = {}
     }, Pool);
 
-    table.insert(Pool.__pools, self);
-    return self;
+    newPool:ApplyStyle(newPool.Style, newPool.OutlineStyle);
+    table.insert(Pool.__pools, newPool);
+    return newPool;
 end
 
 function Pool:Add(instance)
@@ -560,6 +574,9 @@ function Pool:Add(instance)
         plugin:Install(newObject);
     end
     
+
+    ApplyStyleToObject(newObject, self.Style, "Drawings");
+    ApplyStyleToObject(newObject, self.OutlineStyle, "DrawingOutlines");
     self.Objects[instance] = newObject;
 end
 
