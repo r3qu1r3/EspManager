@@ -651,7 +651,7 @@ function Pool:InstallPlugin(plugin)
         plugin:Initialize(); 
     end;
 
-    table.insert(self.Plugins, plugin);
+    self.Plugins[plugin.Name] = plugin;
 end
 
 --// Pool Hooks 
@@ -685,3 +685,7 @@ return {
     Pool = Pool, 
     Object = Object    
 }
+
+
+
+
