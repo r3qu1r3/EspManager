@@ -332,12 +332,20 @@ end
 function Object:Update(settings, pool)
     local target = self.Instance;
     if not (target and target:IsDescendantOf(workspace)) then
-        return self:ChangeVisibility(false);
+        return self:Destroy();
     end
 
     local box = GetBoundingBox(target);
     if not box then
-        return self:ChangeVisibility(false);
+        self:ChangeVisibility(false);
+        for _, plugin in pairs(pool.Plugins) do 
+            plugin:Update(pool, self, target, box);
+        end;
+        return;
+    end
+
+    for _, plugin in pairs(pool.Plugins) do 
+        plugin:Update(pool, self, target, box);
     end
 
     --// 3D Box 
@@ -518,10 +526,6 @@ function Object:Update(settings, pool)
         fill.Visible = true;
         fill.Position = fillPos;
         fill.Size = fillSize;
-    end
-
-    for _, plugin in pairs(pool.Plugins) do 
-        plugin:Update(pool, self, target, box);
     end
 end
 
