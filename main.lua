@@ -629,9 +629,7 @@ function Pool:InstallPlugin(plugin)
         self.OutlineStyle[style] = plugin.OutlineStyle[style];
     end
 
-    print(plugin)
     if (plugin.Initialize) then 
-        print('initializing plugin');
         plugin:Initialize(); 
     end;
 
@@ -669,4 +667,3 @@ return {
     Pool = Pool, 
     Object = Object    
 }
-
