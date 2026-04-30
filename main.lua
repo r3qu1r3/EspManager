@@ -12,6 +12,12 @@ export type DrawingObject = {
     Filled: boolean?;
     From: Vector2?;
     To: Vector2?;
+    Text: string?;
+    FontSize: number?;
+    Font: any?;
+    Center: boolean?;
+    Outline: boolean?;
+    OutlineColor: Color3?;
 };
 
 export type MemoryTemplate = { [string]: string };
@@ -35,6 +41,7 @@ export type Plugin = {
     Settings: PluginSettings;
     Bindings: { [string]: SettingBinding }?;
     MemoryTemplate: MemoryTemplate;
+    Validate: ((entry: RegistryEntry) -> boolean)?;
     UpdateEntry: (self: Plugin, entry: RegistryEntry, math: MathFunctionsType) -> ();
     OnSettingChanged: ((self: Plugin, entry: RegistryEntry, key: string, value: any) -> ())?;
 };
@@ -149,8 +156,18 @@ end;
 
 -- // Internal helpers
 
--- Reads from the raw settings table directly (bypasses proxy) and applies to drawings
-local function FlushSettingsToEntry(rawSettings: { [string]: any }, bindings: { [string]: SettingBinding }?, memory: DrawingMemory, onSettingChanged: ((key: string, value: any) -> ())?)
+local function CleanupEntry(entry: RegistryEntry)
+    for _, drawingObj: DrawingObject in entry.DrawingMemory do
+        (drawingObj :: any):Remove();
+    end;
+end;
+
+local function FlushSettingsToEntry(
+    rawSettings: { [string]: any },
+    bindings: { [string]: SettingBinding }?,
+    memory: DrawingMemory,
+    onSettingChanged: ((key: string, value: any) -> ())?
+)
     if bindings then
         for settingKey: string, binding: SettingBinding in bindings do
             local obj: DrawingObject? = memory[binding.DrawingKey];
@@ -161,7 +178,6 @@ local function FlushSettingsToEntry(rawSettings: { [string]: any }, bindings: { 
         end;
     end;
 
-    -- Also call onSettingChanged for anything not covered by bindings
     if onSettingChanged then
         for key: string, value: any in rawSettings do
             if key == "Enabled" then continue end;
@@ -236,7 +252,6 @@ function ESPManager:PushPlugin(LinkOrTable: string | Plugin)
     local plugin: Plugin = (typeof(LinkOrTable) == "string" and loadstring(game:HttpGet(LinkOrTable))()) or (LinkOrTable :: Plugin);
     assert(plugin.Name, "Plugin must have a Name field");
 
-    -- Capture raw before wrapping
     local rawSettings = plugin.Settings;
     local bindings = plugin.Bindings;
 
@@ -253,10 +268,9 @@ function ESPManager:PushPlugin(LinkOrTable: string | Plugin)
             obj.Visible = false;
             entry.DrawingMemory[drawingKey] = obj :: DrawingObject;
         end;
-        -- Flush AFTER drawings are in memory
-        FlushSettingsToEntry(rawSettings, bindings, entry.DrawingMemory, 
-            if plugin.OnSettingChanged 
-            then function(key, value) plugin:OnSettingChanged(entry, key, value) end 
+        FlushSettingsToEntry(rawSettings, bindings, entry.DrawingMemory,
+            if plugin.OnSettingChanged
+            then function(key, value) plugin:OnSettingChanged(entry, key, value) end
             else nil
         );
     end;
@@ -313,7 +327,6 @@ function ESPManager:PushInstanceToRegistry(Object: Instance, Data: { [string]: a
             Entry.DrawingMemory[drawingKey] = obj :: DrawingObject;
         end;
 
-        -- Flush AFTER all drawings inserted
         FlushSettingsToEntry(rawSettings, plugin.Bindings, Entry.DrawingMemory,
             if plugin.OnSettingChanged
             then function(key, value) plugin:OnSettingChanged(Entry, key, value) end
@@ -328,16 +341,31 @@ end;
 function ESPManager:RemoveInstanceFromRegistry(Object: Instance)
     for i, entry: RegistryEntry in self.Registry do
         if entry.Object ~= Object then continue end;
-        for _, drawingObj: DrawingObject in entry.DrawingMemory do
-            (drawingObj :: any):Remove();
-        end;
+        CleanupEntry(entry);
         table.remove(self.Registry, i);
         return;
     end;
 end;
 
 function ESPManager:UpdateRegistry()
-    for _, entry: RegistryEntry in self.Registry do
+    local toRemove: { number } = {};
+
+    for i, entry: RegistryEntry in self.Registry do
+        local valid = true;
+
+        for _, plugin: Plugin in self.Plugins do
+            if plugin.Validate and not plugin.Validate(entry) then
+                valid = false;
+                break;
+            end;
+        end;
+
+        if not valid then
+            CleanupEntry(entry);
+            table.insert(toRemove, i);
+            continue;
+        end;
+
         for _, plugin: Plugin in self.Plugins do
             if not plugin.Settings.Enabled then
                 for drawingKey: string in plugin.MemoryTemplate do
@@ -348,6 +376,10 @@ function ESPManager:UpdateRegistry()
             end;
             plugin:UpdateEntry(entry, MathFunctions);
         end;
+    end;
+
+    for i = #toRemove, 1, -1 do
+        table.remove(self.Registry, toRemove[i]);
     end;
 end;
 
