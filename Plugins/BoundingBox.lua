@@ -1,4 +1,4 @@
-local BoundingBoxPlugin: Plugin = {
+return {
     Name = "BoundingBox";
     Settings = {
         Enabled      = true;
@@ -12,16 +12,18 @@ local BoundingBoxPlugin: Plugin = {
         Thickness    = { DrawingKey = "Box"; Property = "Thickness" };
         Transparency = { DrawingKey = "Box"; Property = "Transparency" };
     };
-    UpdateEntry = function(self: Plugin, Entry: RegistryEntry, Math: MathFunctionsType)
-        local Box: DrawingObject = Entry.DrawingMemory.Box;
-        local MinX, MinY, _, _, Size = Math.Get2DBoundingBox(Entry.Object);
-
-        if MinX == -1 then Box.Visible = false; return end;
-
-        Box.Visible  = true;
-        Box.Size     = Size;
-        Box.Position = Vector2.new(MinX, MinY);
+    Validate = function(entry)
+        local obj = entry.Object;
+        if not obj or not obj.Parent then return false end;
+        local humanoid = obj:FindFirstChildWhichIsA("Humanoid");
+        return humanoid ~= nil and humanoid.Health > 0;
+    end;
+    UpdateEntry = function(self, entry, math)
+        local box = entry.DrawingMemory.Box;
+        local minX, minY, _, _, size = math.Get2DBoundingBox(entry.Object);
+        if minX == -1 then box.Visible = false; return end;
+        box.Visible  = true;
+        box.Size     = size;
+        box.Position = Vector2.new(minX, minY);
     end;
 };
-
-return BoundingBoxPlugin;
